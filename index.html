@@ -25,7 +25,10 @@ body{
 /* IG SAFE MODE */
 .ig-safe{
   max-width:420px; /* 9:16 safe area */
-  aspect-ratio:9/16;
+  width:100%;
+  height:calc(100vw * 16 / 9);
+  max-height:100vh;
+  aspect-ratio:auto; /* fallback for IG in-app browser */
   padding:24px 18px;
 }
 .ig-safe .logo-img{max-width:180px}
