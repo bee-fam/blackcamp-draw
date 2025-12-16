@@ -190,7 +190,8 @@ function revealWinners(total){
     remainingParticipants = remainingParticipants.filter(p => !winners.includes(p));
   }
 
-  setTimeout(exportPoster, delayIndex * 500 + 600);
+  // export poster hanya via tombol (on-demand)
+  // setTimeout(exportPoster, delayIndex * 500 + 600);
 }
 
 function exportPoster(){
