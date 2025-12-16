@@ -79,12 +79,13 @@ button:hover{opacity:.85}
 <body>
 <div class="container" id="mainContainer">
   <div class="scanline"></div>
-  <div class="logo"><img src="BC LOGO 2 WHITE.png" class="logo-img" alt="Blackcamp"></div>
+  <div class="logo"><img src="./BC%20LOGO%202%20WHITE.png" class="logo-img" alt="Blackcamp"></div>
   <div class="tagline">THE UNOFFICIAL 0.0 · COME AS YOU ARE</div>
   <div class="event-info">DATE: 23–25 JANUARY 2026 · LOCATION: HAPPY HILLS CIWIDEY BANDUNG</div>
   <hr>
 
   <textarea id="names" placeholder="Masukkan nama peserta (1 nama per baris)"></textarea>
+  <textarea id="reserved" placeholder="Reserved names" style="margin-top:10px"></textarea>
   <div class="controls"><input type="number" id="total" value="5" min="1"></div>
   <div class="controls">
     <label style="font-size:12px;color:#aaa;display:flex;align-items:center;gap:8px;">
@@ -92,6 +93,7 @@ button:hover{opacity:.85}
     </label>
   </div>
   <button onclick="startDraw()">START THE DRAW</button>
+<button onclick="exportPoster()" style="margin-top:10px;background:#080808;color:#fff;border:1px solid #222">EXPORT POSTER</button>
 <button onclick="toggleIGMode()" style="margin-top:10px;background:#080808;color:#fff;border:1px solid #222">IG LIVE / REEL MODE</button>
 
   <div class="countdown" id="countdown">3</div>
@@ -102,55 +104,147 @@ button:hover{opacity:.85}
 <audio id="tick" src="https://assets.mixkit.co/sfx/preview/mixkit-click-melodic-1124.mp3"></audio>
 <audio id="hit" src="https://assets.mixkit.co/sfx/preview/mixkit-impact-plate-2856.mp3"></audio>
 
+
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>
-let remainingParticipants=[];
-let igMode=false;
+let remainingParticipants = [];
+let igMode = false;
 
 function toggleIGMode(){
-  igMode=!igMode;
-  document.getElementById('mainContainer').classList.toggle('ig-safe',igMode);
+  igMode = !igMode;
+  document.getElementById('mainContainer').classList.toggle('ig-safe', igMode);
+}
+
+function parseList(id){
+  return document.getElementById(id).value
+    .split('\n')
+    .map(n => n.trim())
+    .filter(Boolean);
 }
 
 function startDraw(){
-  if(remainingParticipants.length===0){
-    remainingParticipants=document.getElementById('names').value
-      .split('\n').map(n=>n.trim()).filter(Boolean);
+  if(remainingParticipants.length === 0){
+    const allNames = parseList('names');
+    const reserved = parseList('reserved');
+    remainingParticipants = allNames.filter(n => !reserved.includes(n));
   }
-  const total=parseInt(document.getElementById('total').value,10);
-  if(remainingParticipants.length<total){alert('Jumlah peserta tidak cukup');return}
 
-  document.getElementById('winners').innerHTML='';
-  const cd=document.getElementById('countdown');
-  let count=3;cd.textContent=count;cd.classList.add('show');
+  const total = parseInt(document.getElementById('total').value, 10);
+  if(remainingParticipants.length < total){
+    alert('Jumlah peserta tidak cukup');
+    return;
+  }
 
-  const timer=setInterval(()=>{
+  document.getElementById('winners').innerHTML = '';
+  const cd = document.getElementById('countdown');
+  let count = 3;
+  cd.textContent = count;
+  cd.classList.add('show');
+
+  const timer = setInterval(() => {
     document.getElementById('tick').play();
     count--;
-    if(count>0){cd.textContent=count}
-    else{clearInterval(timer);cd.classList.remove('show');revealWinners(total)}
-  },900)
+    if(count > 0){
+      cd.textContent = count;
+    } else {
+      clearInterval(timer);
+      cd.classList.remove('show');
+      revealWinners(total);
+    }
+  }, 900);
 }
 
 function revealWinners(total){
-  const shuffled=[...remainingParticipants].sort(()=>0.5-Math.random());
-  const winners=shuffled.slice(0,total);
+  const reserved = parseList('reserved');
+  const shuffled = [...remainingParticipants].sort(() => 0.5 - Math.random());
+  const winners = shuffled.slice(0, total);
 
-  const box=document.getElementById('winners');
-  box.innerHTML='<h3>SELECTED CAMPERS</h3>';
-  const grid=document.createElement('div');grid.className='winner-grid';box.appendChild(grid);
+  const box = document.getElementById('winners');
+  box.innerHTML = '<h3>SELECTED CAMPERS</h3>';
+  const grid = document.createElement('div');
+  grid.className = 'winner-grid';
+  box.appendChild(grid);
 
-  winners.forEach((w,i)=>{
-    setTimeout(()=>{
-      const div=document.createElement('div');
-      div.className='winner-item';div.textContent=w;
-      if(i===winners.length-1){div.classList.add('highlight');document.getElementById('hit').play()}
+  let delayIndex = 0;
+
+  winners.forEach((w) => {
+    setTimeout(() => {
+      const div = document.createElement('div');
+      div.className = 'winner-item';
+      div.textContent = w;
       grid.appendChild(div);
-    },i*500)
-  })
+    }, delayIndex++ * 500);
+  });
+
+  reserved.forEach((r) => {
+    setTimeout(() => {
+      const div = document.createElement('div');
+      div.className = 'winner-item highlight';
+      div.innerHTML = r + '<br><span style="font-size:11px;color:#aaa;letter-spacing:2px">RESERVED</span>';
+      grid.appendChild(div);
+      document.getElementById('hit').play();
+    }, delayIndex++ * 500);
+  });
 
   if(document.getElementById('removeAfterDraw').checked){
-    remainingParticipants=remainingParticipants.filter(p=>!winners.includes(p))
+    remainingParticipants = remainingParticipants.filter(p => !winners.includes(p));
   }
+
+  setTimeout(exportPoster, delayIndex * 500 + 600);
+}
+
+function exportPoster(){
+  const node = document.getElementById('winners');
+  if(!node || node.innerHTML.trim() === ''){
+    alert('Belum ada pemenang untuk di-export');
+    return;
+  }
+
+  // Wrapper 4:5 poster
+  const wrapper = document.createElement('div');
+  wrapper.style.width = '1080px';
+  wrapper.style.height = '1350px'; // 4:5 ratio
+  wrapper.style.background = '#050505';
+  wrapper.style.padding = '80px 60px';
+  wrapper.style.boxSizing = 'border-box';
+  wrapper.style.display = 'flex';
+  wrapper.style.flexDirection = 'column';
+  wrapper.style.justifyContent = 'flex-start';
+  wrapper.style.color = '#eaeaea';
+  wrapper.style.fontFamily = 'Montserrat, sans-serif';
+
+  const header = document.createElement('div');
+  header.style.textAlign = 'center';
+  header.innerHTML = `
+    <img src="./BC%20LOGO%202%20WHITE.png" style="max-width:260px;width:100%;margin-bottom:12px" />
+    <div style="font-size:14px;letter-spacing:2px;color:#aaa">THE UNOFFICIAL 0.0 · COME AS YOU ARE</div>
+    <div style="font-size:12px;color:#666;margin-top:6px">23–25 JANUARY 2026 · HAPPY HILLS CIWIDEY BANDUNG</div>
+    <hr style="border:none;border-top:1px solid #1e1e1e;margin:32px 0" />
+  `;
+
+  const content = node.cloneNode(true);
+  content.style.margin = '0';
+
+  const footer = document.createElement('div');
+  footer.style.marginTop = 'auto';
+  footer.style.textAlign = 'center';
+  footer.style.fontSize = '12px';
+  footer.style.color = '#666';
+  footer.innerText = 'ONE COLOR · JUST BLACK · ALWAYS TOGETHER';
+
+  wrapper.appendChild(header);
+  wrapper.appendChild(content);
+  wrapper.appendChild(footer);
+
+  document.body.appendChild(wrapper);
+
+  html2canvas(wrapper, { backgroundColor:'#050505', scale:2, useCORS:true }).then(canvas => {
+    const link = document.createElement('a');
+    link.download = 'blackcamp-winner-4x5.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    document.body.removeChild(wrapper);
+  });
 }
 </script>
 </body>
