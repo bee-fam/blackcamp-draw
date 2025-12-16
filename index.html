@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blackcamp The Unofficial 0.0 – Cinematic Draw</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050505;--panel:#0f0f0f;--line:#1e1e1e;--text:#eaeaea;--accent:#9f9f9f;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:radial-gradient(circle at top,#111 0%,var(--bg) 60%);
+  color:var(--text);
+  font-family:'Montserrat',sans-serif;
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+}
+.container{
+  width:100%;max-width:720px;background:var(--panel);
+  border:1px solid var(--line);padding:28px;
+  box-shadow:0 0 60px rgba(0,0,0,.8);position:relative;overflow:hidden;
+}
+/* IG SAFE MODE */
+.ig-safe{
+  max-width:420px; /* 9:16 safe area */
+  aspect-ratio:9/16;
+  padding:24px 18px;
+}
+.ig-safe .logo-img{max-width:180px}
+.ig-safe .countdown{font-size:56px}
+.ig-safe textarea{height:110px}
+.ig-safe .footer{font-size:10px}
+.ig-safe .winner-grid{grid-template-columns:1fr}
+
+.scanline{
+  position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(
+    to bottom,rgba(255,255,255,0.02) 0,rgba(255,255,255,0.02) 1px,transparent 1px,transparent 3px
+  );mix-blend-mode:overlay;animation:scan 6s linear infinite;
+}
+@keyframes scan{from{background-position-y:0}to{background-position-y:100%}}
+.logo{text-align:center;margin-bottom:10px}
+.logo-img{max-width:220px;width:100%}
+.tagline{text-align:center;font-size:12px;color:var(--accent)}
+.event-info{text-align:center;font-size:11px;color:#777;margin-top:4px;letter-spacing:1px}
+hr{border:none;border-top:1px solid var(--line);margin:20px 0}
+textarea{width:100%;height:130px;background:#080808;color:var(--text);border:1px solid var(--line);padding:12px;resize:none}
+.controls{display:flex;gap:12px;margin-top:12px}
+input{flex:1;background:#080808;color:var(--text);border:1px solid var(--line);padding:10px}
+button{
+  width:100%;margin-top:16px;background:#fff;color:#000;border:none;
+  padding:14px;font-weight:700;letter-spacing:2px;cursor:pointer
+}
+button:hover{opacity:.85}
+.countdown{
+  text-align:center;font-size:64px;font-weight:700;margin-top:20px;
+  opacity:0;transition:opacity .3s,transform .3s;transform:scale(.8)
+}
+.countdown.show{opacity:1;transform:scale(1)}
+.winners{margin-top:20px;text-align:center}
+.winners h3{font-size:14px;letter-spacing:2px;color:var(--accent)}
+.winner-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:14px}
+.winner-item{
+  background:#080808;border:1px solid var(--line);
+  padding:16px 10px;font-size:16px;font-weight:500;
+  opacity:0;transform:translateY(16px) scale(.9);
+  animation:reveal .5s ease-out forwards
+}
+.winner-item.highlight{
+  border-color:#fff;box-shadow:0 0 20px rgba(255,255,255,.3);
+  transform:scale(1.05);
+}
+@keyframes reveal{to{opacity:1;transform:translateY(0) scale(1)}}
+.footer{text-align:center;font-size:11px;color:#666;margin-top:24px}
+</style>
+</head>
+<body>
+<div class="container" id="mainContainer">
+  <div class="scanline"></div>
+  <div class="logo"><img src="BC LOGO 2 WHITE.png" class="logo-img" alt="Blackcamp"></div>
+  <div class="tagline">THE UNOFFICIAL 0.0 · COME AS YOU ARE</div>
+  <div class="event-info">DATE: 23–25 JANUARY 2026 · LOCATION: HAPPY HILLS CIWIDEY BANDUNG</div>
+  <hr>
+
+  <textarea id="names" placeholder="Masukkan nama peserta (1 nama per baris)"></textarea>
+  <div class="controls"><input type="number" id="total" value="5" min="1"></div>
+  <div class="controls">
+    <label style="font-size:12px;color:#aaa;display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="removeAfterDraw" checked> Remove selected campers from next draw
+    </label>
+  </div>
+  <button onclick="startDraw()">START THE DRAW</button>
+<button onclick="toggleIGMode()" style="margin-top:10px;background:#080808;color:#fff;border:1px solid #222">IG LIVE / REEL MODE</button>
+
+  <div class="countdown" id="countdown">3</div>
+  <div class="winners" id="winners"></div>
+  <div class="footer">© Blackcamp The Unofficial 0.0 · One Color · Just Black · Always Together</div>
+</div>
+
+<audio id="tick" src="https://assets.mixkit.co/sfx/preview/mixkit-click-melodic-1124.mp3"></audio>
+<audio id="hit" src="https://assets.mixkit.co/sfx/preview/mixkit-impact-plate-2856.mp3"></audio>
+
+<script>
+let remainingParticipants=[];
+let igMode=false;
+
+function toggleIGMode(){
+  igMode=!igMode;
+  document.getElementById('mainContainer').classList.toggle('ig-safe',igMode);
+}
+
+function startDraw(){
+  if(remainingParticipants.length===0){
+    remainingParticipants=document.getElementById('names').value
+      .split('\n').map(n=>n.trim()).filter(Boolean);
+  }
+  const total=parseInt(document.getElementById('total').value,10);
+  if(remainingParticipants.length<total){alert('Jumlah peserta tidak cukup');return}
+
+  document.getElementById('winners').innerHTML='';
+  const cd=document.getElementById('countdown');
+  let count=3;cd.textContent=count;cd.classList.add('show');
+
+  const timer=setInterval(()=>{
+    document.getElementById('tick').play();
+    count--;
+    if(count>0){cd.textContent=count}
+    else{clearInterval(timer);cd.classList.remove('show');revealWinners(total)}
+  },900)
+}
+
+function revealWinners(total){
+  const shuffled=[...remainingParticipants].sort(()=>0.5-Math.random());
+  const winners=shuffled.slice(0,total);
+
+  const box=document.getElementById('winners');
+  box.innerHTML='<h3>SELECTED CAMPERS</h3>';
+  const grid=document.createElement('div');grid.className='winner-grid';box.appendChild(grid);
+
+  winners.forEach((w,i)=>{
+    setTimeout(()=>{
+      const div=document.createElement('div');
+      div.className='winner-item';div.textContent=w;
+      if(i===winners.length-1){div.classList.add('highlight');document.getElementById('hit').play()}
+      grid.appendChild(div);
+    },i*500)
+  })
+
+  if(document.getElementById('removeAfterDraw').checked){
+    remainingParticipants=remainingParticipants.filter(p=>!winners.includes(p))
+  }
+}
+</script>
+</body>
+</html>
